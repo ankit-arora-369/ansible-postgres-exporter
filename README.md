@@ -47,6 +47,11 @@ with_pip: "False"
 ```
 False by default, which installs the supervisor from apt. Mark it "True" if you want to install supervisord using pip and can also tweak the supervisor role which is included.
 
+```yaml
+ansible-playbook -i hosts.txt playbook.yml --ask-become-pass -v
+```
+Above is the example command to execute the playbook.
+
 
 Author Information
 ------------------
