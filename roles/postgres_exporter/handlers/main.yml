@@ -1,0 +1,5 @@
+- name: reload supervisord
+  supervisorctl:
+     name: postgres_exporter
+     state: restarted
+     supervisorctl_path: /usr/bin/supervisorctl

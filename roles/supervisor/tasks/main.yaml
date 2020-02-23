@@ -1,0 +1,45 @@
+---
+
+- name: Install list of required packages
+  apt: name={{item}} state=present
+  with_items:
+    - apt-transport-https
+    - lsb-release
+    - python-setuptools
+    - python-pip
+  tags:
+    - with_pip
+
+- name: Installing NumPy python library using Ansible pip module
+  pip:
+    name: supervisor
+    state: present
+  tags:
+    - with_pip
+
+- name: "Creating supervisord dir"
+  file:
+    path: /etc/supervisor/conf.d
+    state: directory
+  tags:
+    - with_pip
+
+- name: "Installing the sample-conf"
+  template: src={{ role_path }}/templates/supervisord.conf.j2
+            dest=/etc/supervisor/conf.d/supervisor.conf
+            owner=root
+            group=root
+            mode=0640
+  tags:
+    - with_pip
+
+- name: "Copying supervisord.service file"
+  template: src=supervisord.service.j2
+            dest=/etc/systemd/system/supervisord.service
+            owner=root
+            group=root
+            mode=0640
+  notify:
+    - reload systemd
+  tags:
+    - with_pip

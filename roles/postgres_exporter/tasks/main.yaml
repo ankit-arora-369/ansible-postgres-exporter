@@ -1,0 +1,112 @@
+---
+
+- include_role:
+    name: supervisor
+  when: with_pip is defined and with_pip == 'True' and with_pip != None
+
+- name: Install list of required packages
+  apt: name={{item}} state=present
+  with_items:
+    - apt-transport-https
+    - lsb-release
+    - python-setuptools
+    - python-pip
+  tags:
+    - postgres_exporter_setup
+
+- name: Installing supervisord using apt
+  apt:
+    name: supervisor
+    state: present
+    update_cache: yes
+  tags:
+    - postgres_exporter_setup
+  when: with_pip is defined and with_pip == 'False'
+
+- name: "Creating postgres_exporter dir with permissions"
+  file:
+    path: {{ postgres_exporter_dir }}
+    state: directory
+    owner: postgres
+    group: postgres
+  tags:
+    - postgres_exporter_setup
+
+- name: "Creating postgres_exporter logs dir"
+  file:
+    path: /var/log/postgres_exporter/
+    state: directory
+    owner: postgres
+    group: postgres
+  tags:
+    - postgres_exporter_setup
+
+- name: "Downloading postgres_exporter binary"
+  get_url:
+    url: "https://github.com/wrouesnel/postgres_exporter/releases/download/{{ postgres_exporter_version }}/postgres_exporter_{{ postgres_exporter_version }}_linux-amd64.tar.gz"
+    dest: "/tmp/postgres_exporter_{{ postgres_exporter_version }}_linux-amd64.tar.gz"
+    mode: '0644'
+  tags:
+    - postgres_exporter_setup
+
+- name: "Untar the binary"
+  command: '/bin/tar -C {{ postgres_exporter_dir }} -xvf /tmp/postgres_exporter_{{ postgres_exporter_version }}_linux-amd64.tar.gz'
+  tags:
+    - postgres_exporter_setup
+
+- name: "Copy the binary"
+  command: 'cp -pf {{ postgres_exporter_dir }}/postgres_exporter_{{ postgres_exporter_version }}_linux-amd64/postgres_exporter /usr/local/bin/'
+  tags:
+    - postgres_exporter_setup
+
+- stat: path=/var/log/postgres_exporter/postgres_exporter.log
+  register: p
+
+- name: create exporter log file
+  file: path=/var/log/postgres_exporter/postgres_exporter.log 
+        owner=postgres
+        group=postgres
+        mode=0644
+        state={{ "file" if  p.stat.exists else "touch"}}
+
+- stat: path=/var/log/postgres_exporter/postgres_exporter.err
+  register: pr
+
+- name: create exporter err file
+  file: path=/var/log/postgres_exporter/postgres_exporter.err
+        owner=postgres
+        group=postgres
+        mode=0644
+        state={{ "file" if  pr.stat.exists else "touch"}}
+
+- name: "Installing the conf"
+  template: src={{ role_path }}/templates/postgres_exporter.conf.j2
+            dest=/etc/supervisor/conf.d/postgres_exporter.conf
+            owner=root
+            group=root
+            mode=0640
+  notify:
+    - reload supervisord
+  tags:
+    - postgres_exporter_setup
+
+
+- name: "Installing the queries.yml"
+  template: src={{ role_path }}/templates/metrics.yaml.j2
+            dest={{ postgres_exporter_query_directory }}
+            owner=postgres
+            group=postgres
+            mode=0644
+  notify:
+    - reload supervisord
+  tags:
+    - postgres_exporter_setup
+
+
+- name: "Running and enabling postgres_exporter.service"
+  service:
+    name: postgres_exporter
+    state: started
+    enabled: yes
+  tags:
+    - postgres_exporter_setup
