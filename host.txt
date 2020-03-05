@@ -1,2 +1,0 @@
-[prod]
-IP_address ansible_ssh_port=22

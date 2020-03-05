@@ -25,7 +25,7 @@
 
 - name: "Creating postgres_exporter dir with permissions"
   file:
-    path: {{ postgres_exporter_dir }}
+    path: "{{ postgres_exporter_dir }}"
     state: directory
     owner: postgres
     group: postgres
@@ -105,7 +105,7 @@
 
 - name: "Running and enabling postgres_exporter.service"
   service:
-    name: postgres_exporter
+    name: supervisor
     state: started
     enabled: yes
   tags:
